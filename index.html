@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>អាហាររហ័សក្រុងបាវិត</title>
+  <style>
+    body { background:#0b132b; color:#fff; font-family:sans-serif; margin:0; padding:0; }
+    .header { display:flex; justify-content:space-between; align-items:center; padding:1rem; flex-wrap:wrap; }
+    .info-card { background:#1c2541; padding:1.5rem; border-radius:1rem; margin:1rem; max-width:400px; }
+    .info-card h2 { margin:0 0 0.5rem; }
+    .menu-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:1rem; padding:1rem; }
+    .card { background:#1c2541; border-radius:1rem; overflow:hidden; box-shadow:0 4px 8px rgba(0,0,0,0.5); display:flex; flex-direction:column; }
+    .card img { width:100%; height:150px; object-fit:cover; }
+    .card-body { padding:1rem; flex-grow:1; display:flex; flex-direction:column; justify-content:space-between; }
+    .card-body h3 { margin:0; font-size:1.1rem; }
+    .card-body p { margin:0.25rem 0; color:#ccc; font-size:0.9rem; }
+    .card-body strong { margin:0.5rem 0; display:block; }
+    .cart-fab { position:fixed; bottom:1rem; right:1rem; background:#06d6a0; color:#000; border:none; padding:1rem; border-radius:50%; font-size:1.2rem; cursor:pointer; }
+    dialog { border:none; border-radius:1rem; padding:1rem; max-width:400px; width:90%; }
+    .cart-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; }
+    .checkout-btn { width:100%; padding:0.75rem; background:#06d6a0; color:#000; font-weight:bold; border:none; border-radius:0.5rem; cursor:pointer; }
+    .cart-item { display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem; }
+    .quantity-controls { display:flex; gap:0.25rem; }
+    .quantity-controls button { padding:0.25rem 0.5rem; font-size:1rem; }
+    input[type="text"] { width:100%; padding:0.5rem; margin:0.25rem 0; border-radius:0.5rem; border:none; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="info-card">
+      <h2>អាហាររហ័សក្រុងបាវិត</h2>
+      <div>⏰ បើក 10:00 – 21:00</div>
+      <div>✅ ដឹកជញ្ជូនឥតគិតថ្លៃ</div>
+      <button>TG Seller: @Vanyou_999</button>
+    </div>
+  </div>
+
+  <div class="menu-grid" id="menu"></div>
+
+  <button class="cart-fab" onclick="openCart()">🛒 <span id="cartCount">0</span></button>
+
+  <dialog id="cart">
+    <div class="cart-head">
+      <strong>Your Cart</strong>
+      <button onclick="closeCart()">Close</button>
+    </div>
+    <input type="text" id="buyerUsername" placeholder="Telegram Username"/>
+    <input type="text" id="buyerLocation" placeholder="Location"/>
+    <div id="cartItems"></div>
+    <p>Total: <span id="cartTotal">៛0</span></p>
+    <button class="checkout-btn" onclick="checkoutTelegram()">Order Now</button>
+  </dialog>
+
+  <script>
+    const baseItems = [
+      { name:"បាយឆាក្ដៅកង្កែប", desc:"", price:15000, img:"https://images.unsplash.com/photo-1600891964599-f61ba0e24092" },
+      { name:"ស៊ុបកូនមាន់ស្រួយ", desc:"", price:12000, img:"https://images.unsplash.com/photo-1617196034796-73e0f675985d" },
+      { name:"កាយបារីសាច់គោ", desc:"", price:12000, img:"https://images.unsplash.com/photo-1605478580702-c9d2bb11f7ab" },
+      { name:"បាយឆាសាច់ជ្រូក", desc:"4 pcs with sweet chili dip.", price:12000, img:"https://images.unsplash.com/photo-1589308078056-f06f3c45f6b5" },
+      { name:"បាយឆា", desc:"", price:12000, img:"https://images.unsplash.com/photo-1617191517002-fba9cc9e9286" },
+      { name:"កាយបារីសាច់មាន់", desc:"", price:12000, img:"https://images.unsplash.com/photo-1625940924522-6a33d7e644a1" }
+    ];
+
+    const menu = Array.from({length:100}, (_,i)=>baseItems[i % baseItems.length]);
+
+    const menuDiv = document.getElementById("menu");
+    menu.forEach((item,index)=>{
+      const card = document.createElement("div");
+      card.className="card";
+      card.innerHTML=`
+        <img src="${item.img}" alt="${item.name}" />
+        <div class="card-body">
+          <h3>${item.name}</h3>
+          <p>${item.desc}</p>
+          <strong>៛${item.price.toLocaleString()}</strong>
+          <button onclick="addToCart(${index})">Add to Cart</button>
+        </div>
+      `;
+      menuDiv.appendChild(card);
+    });
+
+    let cart = {};
+
+    function addToCart(i){
+      if(!cart[i]) cart[i]=1;
+      else cart[i]++;
+      renderCart();
+      updateCartCount();
+    }
+
+    function removeFromCart(i){
+      if(cart[i]) cart[i]--;
+      if(cart[i]<=0) delete cart[i];
+      renderCart();
+      updateCartCount();
+    }
+
+    function renderCart(){
+      const cartItemsDiv=document.getElementById("cartItems");
+      cartItemsDiv.innerHTML="";
+      let total=0;
+      for(let i in cart){
+        const item=menu[i];
+        const qty=cart[i];
+        total+=item.price*qty;
+
+        const div=document.createElement("div");
+        div.className="cart-item";
+        div.innerHTML=`
+          <span>${item.name} – ៛${(item.price*qty).toLocaleString()}</span>
+          <div class="quantity-controls">
+            <button onclick="removeFromCart(${i})">-</button>
+            <span>${qty}</span>
+            <button onclick="addToCart(${i})">+</button>
+          </div>
+        `;
+        cartItemsDiv.appendChild(div);
+      }
+      document.getElementById("cartTotal").innerText=`៛${total.toLocaleString()}`;
+    }
+
+    function updateCartCount(){
+      const count=Object.values(cart).reduce((a,b)=>a+b,0);
+      document.getElementById("cartCount").innerText=count;
+    }
+
+    function openCart(){
+      renderCart();
+      document.getElementById("cart").showModal();
+    }
+
+    function closeCart(){ document.getElementById("cart").close(); }
+
+    function checkoutTelegram(){
+      const username = document.getElementById("buyerUsername").value.trim();
+      const location = document.getElementById("buyerLocation").value.trim();
+      if(!username || !location){
+        alert("សូមបំពេញ Telegram Username និង Location!");
+        return;
+      }
+      let message=`បញ្ជាទិញម្ហូប៖\nUsername: ${username}\nLocation: ${location}\n\n`;
+      let total=0;
+      for(let i in cart){
+        const item=menu[i];
+        const qty=cart[i];
+        total+=item.price*qty;
+        message+=`- ${item.name} x ${qty} = ៛${(item.price*qty).toLocaleString()}\n`;
+      }
+      message+=`\nសរុប: ៛${total.toLocaleString()}`;
+
+      const token="YOUR_TELEGRAM_BOT_TOKEN";
+      const chatId="YOUR_CHAT_ID";
+      fetch(`https://api.telegram.org/bot${token}/sendMessage`,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({chat_id:chatId,text:message})
+      });
+      alert("បានផ្ញើការបញ្ជាទិញទៅ Telegram!");
+      closeCart();
+      cart={};
+      updateCartCount();
+    }
+  </script>
+</body>
+</html>
